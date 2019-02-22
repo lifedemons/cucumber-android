@@ -32,7 +32,7 @@ public class UniqueTestNameProvider<T> {
 	 * @param testCase the test case
 	 * @return a unique test name
 	 */
-	public String calculateUniqueTestName(T testCase,String testCaseName,String testCaseUri) {
+	public String calculateUniqueTestName(T testCase, String testCaseName, String testCaseUri) {
 		String existingName = uniqueTestNameForTestCase.get(testCase);
 		if (existingName != null) {
 			// Nothing to do: there is already a test name for the passed test case object

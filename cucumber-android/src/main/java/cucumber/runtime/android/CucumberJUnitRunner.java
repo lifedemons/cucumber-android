@@ -11,6 +11,8 @@ import org.junit.runner.manipulation.Filterable;
 import org.junit.runner.manipulation.NoTestsRemainException;
 import org.junit.runner.notification.RunNotifier;
 
+import android.os.Bundle;
+
 import java.util.Iterator;
 import java.util.List;
 
@@ -22,12 +24,32 @@ public class CucumberJUnitRunner extends Runner implements Filterable {
 
     private final UniqueTestNameProvider<PickleEvent> uniqueTestNameProvider = new UniqueTestNameProvider<>();
 
-    public CucumberJUnitRunner(@SuppressWarnings("unused") Class testClass) {
+    public CucumberJUnitRunner(@SuppressWarnings("unused") Class testClass)
+            throws NoTestsRemainException {
         CucumberAndroidJUnitRunner instrumentationRunner = (CucumberAndroidJUnitRunner) InstrumentationRegistry
                 .getInstrumentation();
-        cucumberExecutor = new CucumberExecutor(new Arguments(instrumentationRunner.getArguments()),
+        Bundle arguments = instrumentationRunner.getArguments();
+        cucumberExecutor = new CucumberExecutor(new Arguments(arguments),
                                                 instrumentationRunner);
         pickleEvents = cucumberExecutor.getPickleEvents();
+        filterScenarios(arguments);
+    }
+
+    private void filterScenarios(final Bundle arguments) throws NoTestsRemainException {
+        String scenarioQuery = arguments.getString(CucumberAndroidJUnitRunner.ARGUMENT_CUCUMBER_SCENARIO);
+        if (scenarioQuery != null && !scenarioQuery.isEmpty()) {
+            Description targetDescription = getDescriptionFromScenarioQuery(scenarioQuery);
+
+            filter(Filter.matchMethodDescription(targetDescription));
+        }
+    }
+
+    private Description getDescriptionFromScenarioQuery(final String scenarioQuery) {
+        int indexOfFeatureAndScenarioSeparator = scenarioQuery.indexOf("#");
+        String featureName = scenarioQuery.substring(0, indexOfFeatureAndScenarioSeparator);
+        String scenarioName = scenarioQuery.substring(indexOfFeatureAndScenarioSeparator + 1);
+
+        return Description.createTestDescription(featureName, scenarioName, scenarioName);
     }
 
     @Override
@@ -42,7 +64,11 @@ public class CucumberJUnitRunner extends Runner implements Filterable {
 
     private Description makeDescriptionFromPickle(PickleEvent pickleEvent) {
         String testName = uniqueTestNameProvider.calculateUniqueTestName(pickleEvent, pickleEvent.pickle.getName(), pickleEvent.uri);
-        return Description.createTestDescription(pickleEvent.uri, testName, testName);
+        return Description.createTestDescription(getClassNameFromUri(pickleEvent.uri), testName, testName);
+    }
+
+    private String getClassNameFromUri(final String pickleUri) {
+        return pickleUri.replaceAll("/", "_");
     }
 
     @Override
